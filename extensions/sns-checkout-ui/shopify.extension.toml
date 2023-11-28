@@ -19,6 +19,7 @@ module = "./src/Checkout.jsx"
 target = "purchase.checkout.block.render"
 
 [extensions.capabilities]
+block_progress = true
 # Gives your extension access to directly query Shopify’s storefront API.
 # https://shopify.dev/docs/api/checkout-ui-extensions/unstable/configuration#api-access
 api_access = true
