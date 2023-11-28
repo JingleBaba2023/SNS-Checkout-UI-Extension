@@ -19589,14 +19589,54 @@ ${errorInfo.componentStack}`);
     const [showError, setShowError] = (0, import_react20.useState)(false);
     const lines = useCartLines();
     (0, import_react20.useEffect)(() => {
-      fetchProducts();
-    }, []);
+      let freeGiftCount = 0;
+      lines.map((line) => {
+        let isFreeProduct = false;
+        line.attributes.forEach((attr) => {
+          if (attr.key == "_attribution" && attr.value == "Rebuy Tiered Progress Bar") {
+            isFreeProduct = true;
+          }
+        });
+        isFreeProduct && freeGiftCount++;
+        isFreeProduct && updateCart(line);
+      });
+      if (lines.length == freeGiftCount) {
+        lines.forEach((line) => removeCartItem(line));
+      }
+    }, [lines]);
     (0, import_react20.useEffect)(() => {
       if (showError) {
         const timer = setTimeout(() => setShowError(false), 3e3);
         return () => clearTimeout(timer);
       }
     }, [showError]);
+    function updateCart(line) {
+      return __async(this, null, function* () {
+        var updateQuantity = yield applyCartLinesChange({
+          type: "updateCartLine",
+          id: `${line.id}`,
+          merchandiseId: `${line.merchandise.id}`,
+          quantity: 1
+        });
+        if (updateQuantity.type === "error") {
+          setShowError(true);
+          console.error(updateQuantity.message);
+        }
+      });
+    }
+    function removeCartItem(line) {
+      return __async(this, null, function* () {
+        const removeItem = yield applyCartLinesChange({
+          type: "removeCartLine",
+          id: `${line.id}`,
+          quantity: line.quantity
+        });
+        if (removeItem.type === "error") {
+          setShowError(true);
+          console.error(removeItem.message);
+        }
+      });
+    }
     function handleAddToCart(variantId) {
       return __async(this, null, function* () {
         setAdding(true);

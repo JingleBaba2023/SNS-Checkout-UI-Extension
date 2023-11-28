@@ -13,7 +13,7 @@ import {
   SkeletonImage,
   useCartLines,
   useApplyCartLinesChange,
-  useApi,
+  useApi
 } from "@shopify/ui-extensions-react/checkout";
 // Set up the entry point for the extension
 export default reactExtension("purchase.checkout.block.render", () => <App />);
@@ -28,15 +28,57 @@ function App() {
   const lines = useCartLines();
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    let freeGiftCount = 0;
+    lines.map(line => {
+      let isFreeProduct = false;
+      line.attributes.forEach(attr => {
+        if(attr.key == '_attribution' && attr.value == 'Rebuy Tiered Progress Bar'){
+          isFreeProduct = true;
+        }
+      });
+        isFreeProduct && freeGiftCount++;
+        isFreeProduct && updateCart(line);
+      })
+    
+    if(lines.length == freeGiftCount){
+      lines.forEach(line => removeCartItem(line))
+    }
+  }, [lines]);
+
+
 
   useEffect(() => {
     if (showError) {
       const timer = setTimeout(() => setShowError(false), 3000);
       return () => clearTimeout(timer);
     }
+
   }, [showError]);
+
+  async function updateCart(line){
+      var updateQuantity = await applyCartLinesChange({
+        type: 'updateCartLine',
+        id: `${line.id}`,
+        merchandiseId: `${line.merchandise.id}`,
+        quantity: 1,
+      });
+      if (updateQuantity.type === 'error') {
+        setShowError(true);
+        console.error(updateQuantity.message);
+      }
+  }
+  async function removeCartItem(line){
+      const removeItem = await applyCartLinesChange({
+        type: 'removeCartLine',
+        id: `${line.id}`,
+        quantity: line.quantity
+      })
+      if (removeItem.type === 'error') {
+        setShowError(true);
+        console.error(removeItem.message);
+      }
+    // window.location.href = "/"
+  }
 
     async function handleAddToCart(variantId) {
       setAdding(true);
