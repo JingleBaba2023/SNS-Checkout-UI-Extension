@@ -30,6 +30,9 @@ function App() {
   const [freeProductsCount , updateFreeProductsCount] = useState(0);
   const lines = useCartLines();
 
+  console.log(freeProductsCount , "freeProductsCount");
+  console.log(lines.length, "cart item length");
+
 
   useBuyerJourneyIntercept(
     ({canBlockProgress}) => {
@@ -51,18 +54,20 @@ function App() {
     },
   );
 
-  
+
   useEffect(() => {
-    lines.map(line => {
+   let freeCount = 0;
+    for (const line of lines) {
       let isFreeProduct = false;
       line.attributes.forEach(attr => {
         if(attr.key == '_attribution' && attr.value == 'Rebuy Tiered Progress Bar'){
           isFreeProduct = true;
+          freeCount++;
         }
       });
+        isFreeProduct && updateFreeProductsCount(freeCount);
         isFreeProduct && line.quantity >= 2 && updateCart(line);
-        isFreeProduct && updateFreeProductsCount(freeProductsCount + 1);
-      })
+      }
   }, [lines]);
 
 
@@ -82,6 +87,7 @@ function App() {
         merchandiseId: `${line.merchandise.id}`,
         quantity: 1,
       });
+
       if (updateQuantity.type === 'error') {
         setShowError(true);
         console.error(updateQuantity.message);

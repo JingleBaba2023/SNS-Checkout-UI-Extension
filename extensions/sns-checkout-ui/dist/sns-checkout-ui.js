@@ -19460,6 +19460,8 @@ ${errorInfo.componentStack}`);
     const [showError, setShowError] = (0, import_react9.useState)(false);
     const [freeProductsCount, updateFreeProductsCount] = (0, import_react9.useState)(0);
     const lines = useCartLines();
+    console.log(freeProductsCount, "freeProductsCount");
+    console.log(lines.length, "cart item length");
     useBuyerJourneyIntercept(
       ({ canBlockProgress }) => {
         return canBlockProgress && lines.length == freeProductsCount ? {
@@ -19477,16 +19479,18 @@ ${errorInfo.componentStack}`);
       }
     );
     (0, import_react9.useEffect)(() => {
-      lines.map((line) => {
+      let freeCount = 0;
+      for (const line of lines) {
         let isFreeProduct = false;
         line.attributes.forEach((attr) => {
           if (attr.key == "_attribution" && attr.value == "Rebuy Tiered Progress Bar") {
             isFreeProduct = true;
+            freeCount++;
           }
         });
+        isFreeProduct && updateFreeProductsCount(freeCount);
         isFreeProduct && line.quantity >= 2 && updateCart(line);
-        isFreeProduct && updateFreeProductsCount(freeProductsCount + 1);
-      });
+      }
     }, [lines]);
     (0, import_react9.useEffect)(() => {
       if (showError) {
@@ -19510,3 +19514,4 @@ ${errorInfo.componentStack}`);
     }
   }
 })();
+//# sourceMappingURL=sns-checkout-ui.js.map
