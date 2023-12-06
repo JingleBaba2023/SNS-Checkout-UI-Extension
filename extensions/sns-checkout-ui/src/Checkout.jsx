@@ -48,7 +48,7 @@ function App() {
       body: graphql
     };
 
-    const productData = await fetch("https://umesh-dev-store.myshopify.com/api/2023-10/graphql.json", requestOptions);
+    const productData = await fetch("https://sports-nutrition-source-canada.myshopify.com/api/2023-10/graphql.json", requestOptions);
     const productJson = await productData.json();
     return productJson;
   }
