@@ -19836,3 +19836,4 @@ ${errorInfo.componentStack}`);
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Banner2, { status: "critical", children: "There was an issue adding this product. Please try again." });
   }
 })();
+//# sourceMappingURL=sns-checkout-ui.js.map
