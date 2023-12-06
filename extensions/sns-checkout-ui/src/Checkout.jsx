@@ -33,7 +33,7 @@ function App() {
 
   const fetchProduct = async (id) => {
     const headers = new Headers();
-    headers.append("X-Shopify-Storefront-Access-Token", "8391eace9d52e78d66fa50b5aadcc894");
+    headers.append("X-Shopify-Storefront-Access-Token", "d199d7b1934bb49ef55c92ffd695421d");
     headers.append("Content-Type", "application/json");
     const query = "query product ($id: ID) { product(id: $id) { title tags }}"
     const variables = { id }
