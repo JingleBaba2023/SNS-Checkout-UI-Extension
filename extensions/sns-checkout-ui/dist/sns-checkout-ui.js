@@ -19655,7 +19655,6 @@ ${errorInfo.componentStack}`);
         (() => __async(this, null, function* () {
           const { data: { product: { tags } } } = yield fetchProduct(line.merchandise.product.id);
           if (!isFreeProduct && tags.find((item) => item == "free_gift")) {
-            console.log("condition matched");
             yield removeCartItem(line);
           }
         }))();
@@ -19683,15 +19682,11 @@ ${errorInfo.componentStack}`);
     }
     function removeCartItem(line) {
       return __async(this, null, function* () {
-        console.log(
-          "removing items"
-        );
         const removeItem = yield applyCartLinesChange({
           type: "removeCartLine",
           id: `${line.id}`,
           quantity: line.quantity
         });
-        console.log("removed");
         if (removeItem.type === "error") {
           setShowError(true);
           console.error(removeItem.message);
@@ -19737,7 +19732,6 @@ ${errorInfo.componentStack}`);
   }
   function Extension({ lines }) {
     const address = useShippingAddress();
-    console.log(lines);
     useBuyerJourneyIntercept(
       ({ canBlockProgress }) => {
         return canBlockProgress && (address == null ? void 0 : address.countryCode) && address.countryCode !== "CA" ? {
@@ -19842,4 +19836,3 @@ ${errorInfo.componentStack}`);
     return /* @__PURE__ */ (0, import_jsx_runtime4.jsx)(Banner2, { status: "critical", children: "There was an issue adding this product. Please try again." });
   }
 })();
-//# sourceMappingURL=sns-checkout-ui.js.map

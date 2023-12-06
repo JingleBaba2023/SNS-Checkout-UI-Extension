@@ -88,7 +88,6 @@ function App() {
       (async () => {
        const {data:{product:{tags}}} =  await fetchProduct(line.merchandise.product.id);
        if(!isFreeProduct && tags.find(item => item == 'free_gift')){
-        console.log("condition matched");
         await removeCartItem(line);
        }
       })();
@@ -116,16 +115,11 @@ function App() {
     }
   }
   async function removeCartItem(line) {
-    console.log(
-      "removing items"
-    )
-
     const removeItem = await applyCartLinesChange({
       type: 'removeCartLine',
       id: `${line.id}`,
       quantity: line.quantity
     })
-    console.log("removed");
     if (removeItem.type === 'error') {
       setShowError(true);
       console.error(removeItem.message);
@@ -174,7 +168,6 @@ function App() {
 
 function Extension({ lines }) {
   const address = useShippingAddress();
-  console.log(lines)
   useBuyerJourneyIntercept(
     ({ canBlockProgress }) => {
       return canBlockProgress &&
