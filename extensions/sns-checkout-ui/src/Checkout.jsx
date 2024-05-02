@@ -75,18 +75,21 @@ function App() {
 
 
   useEffect(() => {
+    let freeProductsCount = 0;
     lines.map(line => {
       let isFreeProduct = false;
       line.attributes.forEach(attr => {
         if (attr.key == '_attribution' && attr.value == 'Rebuy Tiered Progress Bar') {
           isFreeProduct = true;
+          freeProductsCount = freeProductsCount + 1;
         }
       });
       isFreeProduct && line.quantity >= 2 && updateCart(line);
-      isFreeProduct && updateFreeProductsCount(freeProductsCount + 1);
+      isFreeProduct && updateFreeProductsCount(freeProductsCount);
        
       (async () => {
-       const {data:{product:{tags}}} =  await fetchProduct(line.merchandise.product.id);
+       const {data:{product}} =  await fetchProduct(line.merchandise.product.id);
+       const {tags = []} = product || {};
        if(!isFreeProduct && tags.find(item => item == 'free_gift')){
         await removeCartItem(line);
        }
