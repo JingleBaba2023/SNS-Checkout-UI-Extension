@@ -136,7 +136,7 @@ function App() {
         if (!product) return {};
         const curatedCollection = product?.collections?.nodes?.map(item => item.id);
         const tags = product?.tags;
-        return { tags, collecions: curatedCollection, ...line };
+        return { tags, collections: curatedCollection, ...line };
       }))
       setLineItemsData(curatedLinesData)
     })()
@@ -145,13 +145,14 @@ function App() {
 
   useEffect(() => {
     if (lineItemsData.length > 0) {
+      debugger;
       let freeProductsCount = 0;
       let isFreeProduct = false; //for rebuy tier product
       let doesComplimentaryProductExist = false; //for complimentary product
       lineItemsData.forEach(async (line) => {
         let isComplimentaryProduct = false;
         doesComplimentaryProductExist = false;
-        line.attributes.forEach(attr => {
+        line?.attributes?.forEach(attr => {
           if (attr.key == '_attribution' && attr.value == 'Rebuy Tiered Progress Bar') {
             isFreeProduct = true;
             freeProductsCount = freeProductsCount + 1;
@@ -163,7 +164,7 @@ function App() {
           }
         });
         isFreeProduct && line.quantity >= 2 && await updateCart(line);
-        updateFreeProductsCount(freeProductsCount);
+        // updateFreeProductsCount(freeProductsCount);
 
         const { tags = [] } = line || {};
         if (!isFreeProduct && tags.find(item => item == 'free_gift')) {
@@ -199,25 +200,25 @@ function App() {
           }
         })
         if (curatedData.length > 0) {
-          lines.forEach((line) => {
-            (async () => {
-              const { data: { product } } = await fetchProduct(line.merchandise.product.id);
-              if (!product) return;
-              const { collections: { nodes: collectionList = [] } } = product || {};
-              collectionList.forEach(async collection => {
+          lineItemsData.map((line) => {
+            const collectionList = line?.collections || [];
+              collectionList.map(async(collection) => {
                 let isFreeProductElible = false;
-                const { id: collectionId } = collection;
                 isFreeProductElible = curatedData.find(setting => {
-                  if (setting.collection == collectionId) {
+                  if (setting.collection == collection) {
                     return setting;
                   }
                 });
                 if (isFreeProductElible) {
                   const variantToAdd = isFreeProductElible.variant;
-                  await handleAddToCart(variantToAdd);
+                  const result = await handleAddToCart(variantToAdd);
+                  if(result.error) {
+                    setTimeout(async () => {
+                      await handleAddToCart(variantToAdd);
+                    }, 1000)
+                  }
                 }
               })
-            })();
           });
         }
       }
@@ -250,6 +251,7 @@ function App() {
       setShowError(true);
       console.error(removeItem.message);
     }
+
     setAdding(false);
   }
   async function handleAddToCart(constiantId) {
@@ -266,6 +268,7 @@ function App() {
       ]
     });
     setAdding(false);
+    return result;
   }
 
   if(adding) {
