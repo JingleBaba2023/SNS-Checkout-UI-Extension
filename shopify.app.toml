@@ -1,9 +1,12 @@
 # Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
 
-name = "sns-checkout-extension"
 client_id = "f1f6b0a50658781dbaca46fd47e9858a"
+name = "sns-checkout-extension"
 application_url = "https://shopify.dev/apps/default-app-home"
 embedded = true
+
+[build]
+dev_store_url = "umesh-dev-store.myshopify.com"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
@@ -17,6 +20,3 @@ api_version = "2023-10"
 
 [pos]
 embedded = false
-
-[build]
-dev_store_url = "umesh-dev-store.myshopify.com"

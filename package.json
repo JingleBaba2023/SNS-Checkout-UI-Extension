@@ -11,8 +11,8 @@
     "deploy": "shopify app deploy"
   },
   "dependencies": {
-    "@shopify/app": "3.51.2",
-    "@shopify/cli": "3.51.2"
+    "@shopify/app": "^3.48.0",
+    "@shopify/cli": "^3.48.0"
   },
   "trustedDependencies": [
     "@shopify/plugin-cloudflare"

@@ -1,41 +1,33 @@
 import React, { useEffect, useState } from "react";
 import {
   reactExtension,
-  Divider,
-  Image,
-  Banner,
-  Heading,
-  Button,
-  InlineLayout,
-  BlockStack,
-  Text,
-  SkeletonText,
-  SkeletonImage,
   useCartLines,
   useApplyCartLinesChange,
   useBuyerJourneyIntercept,
-  useApi
+  Banner
 } from "@shopify/ui-extensions-react/checkout";
 
 // Set up the entry point for the extension
 export default reactExtension("purchase.checkout.block.render", () => <App />);
 
 function App() {
-  const { query, i18n } = useApi();
   const applyCartLinesChange = useApplyCartLinesChange();
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [adding, setAdding] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [freeProductsCount, updateFreeProductsCount] = useState(0);
   const lines = useCartLines();
-  // const { amount: totalCost } = useSubtotalAmount();
+  const [removedComplimentaryProducts, updateComplimentaryProductFlag] = useState(false);
+  const [lineItemsData, setLineItemsData] = useState([])
 
   const fetchProduct = async (id) => {
     const headers = new Headers();
-    headers.append("X-Shopify-Storefront-Access-Token", "d199d7b1934bb49ef55c92ffd695421d");
+    headers.append("X-Shopify-Storefront-Access-Token", "8391eace9d52e78d66fa50b5aadcc894");
     headers.append("Content-Type", "application/json");
-    const query = "query product ($id: ID) { product(id: $id) { title tags }}"
+    const query = `query product ($id: ID) { product(id: $id) {tags  collections(first: 10) {
+      nodes {
+        id
+      }
+    } }}`
     const variables = { id }
 
     const graphql = JSON.stringify({
@@ -48,13 +40,77 @@ function App() {
       body: graphql
     };
 
-    const productData = await fetch("https://sports-nutrition-source-canada.myshopify.com/api/2023-10/graphql.json", requestOptions);
+    const productData = await fetch("https://umesh-dev-store.myshopify.com/api/2023-10/graphql.json", requestOptions);
     const productJson = await productData.json();
     return productJson;
   }
 
+  const fetchPage = async () => {
+    const headers = new Headers();
+    headers.append("X-Shopify-Storefront-Access-Token", "8391eace9d52e78d66fa50b5aadcc894");
+    headers.append("Content-Type", "application/json");
+    const query = `query page ($handle: String) {
+      page(handle: $handle) {
+        title
+        complimentarySettings:metafield(namespace:"custom", key: "complimentary_product_settings") {
+          value
+        }
+      }
+    }`
+    const variables = { handle: 'global-data-for-checkout-ui-extension-do-not-delete' }
+
+    const graphql = JSON.stringify({
+      query,
+      variables
+    })
+    const requestOptions = {
+      method: 'POST',
+      headers: headers,
+      body: graphql
+    };
+
+    const pageData = await fetch("https://umesh-dev-store.myshopify.com/api/2023-10/graphql.json", requestOptions);
+    const pageJson = await pageData.json();
+    return pageJson;
+  }
+
+  const fetchMetaobject = async (id) => {
+    const headers = new Headers();
+    headers.append("X-Shopify-Storefront-Access-Token", "8391eace9d52e78d66fa50b5aadcc894");
+    headers.append("Content-Type", "application/json");
+    const query = `query metaobject ($id: ID) {
+      metaobject(id: $id) {
+        variant:field(key: "product_variant") {
+          value
+        }
+        collection:field(key: "related_collection") {
+          value
+        }
+      }
+    }`
+    const variables = { id }
+
+    const graphql = JSON.stringify({
+      query,
+      variables
+    })
+    const requestOptions = {
+      method: 'POST',
+      headers: headers,
+      body: graphql
+    };
+
+    const metaObjectData = await fetch("https://umesh-dev-store.myshopify.com/api/2023-10/graphql.json", requestOptions);
+    const metaObjectJson = await metaObjectData.json();
+    return metaObjectJson;
+  }
+
+  
+
   useBuyerJourneyIntercept(
     ({ canBlockProgress }) => {
+      console.log(lines.length);
+      console.log(freeProductsCount);
       return canBlockProgress && lines.length == freeProductsCount
         ? {
           behavior: 'block',
@@ -73,36 +129,106 @@ function App() {
     },
   );
 
+  useEffect(() => {
+    (async () => {
+      const curatedLinesData = await Promise.all(lines.map(async (line) => {
+        const { data: { product } } = await fetchProduct(line.merchandise.product.id);
+        if (!product) return {};
+        const curatedCollection = product?.collections?.nodes?.map(item => item.id);
+        const tags = product?.tags;
+        return { tags, collecions: curatedCollection, ...line };
+      }))
+      setLineItemsData(curatedLinesData)
+    })()
+  }, [lines]);
+
 
   useEffect(() => {
-    let freeProductsCount = 0;
-    lines.map(line => {
-      let isFreeProduct = false;
-      line.attributes.forEach(attr => {
-        if (attr.key == '_attribution' && attr.value == 'Rebuy Tiered Progress Bar') {
-          isFreeProduct = true;
-          freeProductsCount = freeProductsCount + 1;
+    if (lineItemsData.length > 0) {
+      let freeProductsCount = 0;
+      let isFreeProduct = false; //for rebuy tier product
+      let doesComplimentaryProductExist = false; //for complimentary product
+      lineItemsData.forEach(async (line) => {
+        let isComplimentaryProduct = false;
+        doesComplimentaryProductExist = false;
+        line.attributes.forEach(attr => {
+          if (attr.key == '_attribution' && attr.value == 'Rebuy Tiered Progress Bar') {
+            isFreeProduct = true;
+            freeProductsCount = freeProductsCount + 1;
+          }
+          if (attr.key == "_complimentaryProduct" && attr.value == "true") {
+            isComplimentaryProduct = true;
+            doesComplimentaryProductExist = true;
+            freeProductsCount = freeProductsCount + 1;
+          }
+        });
+        isFreeProduct && line.quantity >= 2 && await updateCart(line);
+        updateFreeProductsCount(freeProductsCount);
+
+        const { tags = [] } = line || {};
+        if (!isFreeProduct && tags.find(item => item == 'free_gift')) {
+          await removeCartItem(line);
         }
-      });
-      isFreeProduct && line.quantity >= 2 && updateCart(line);
-      isFreeProduct && updateFreeProductsCount(freeProductsCount);
-       
-      (async () => {
-       const {data:{product}} =  await fetchProduct(line.merchandise.product.id);
-       const {tags = []} = product || {};
-       if(!isFreeProduct && tags.find(item => item == 'free_gift')){
-        await removeCartItem(line);
-       }
-      })();
-    })
-  }, [lines]);
+        if (!removedComplimentaryProducts) {
+          if (isComplimentaryProduct) {
+            await removeCartItem(line);
+          }
+        }
+      })
+      if(!doesComplimentaryProductExist) {
+        updateComplimentaryProductFlag(true);
+      }
+    }
+  }, [lineItemsData])
+
+  //remove existing complimentary product and re-add them
+  useEffect(() => {
+    (async () => {
+      if (removedComplimentaryProducts) {
+        const { data: { page: { complimentarySettings: { value: metaObjectData } } } } = await fetchPage();
+        const metaObjectJson = JSON.parse(metaObjectData);
+        const complimentarySettings = await Promise.all(metaObjectJson.map(async (metaobject) => {
+          return await fetchMetaobject(metaobject)
+        }));
+        const curatedData = complimentarySettings.map(setting => {
+          const collection = setting?.data?.metaobject?.collection.value;
+          const variant = setting?.data?.metaobject?.variant.value;
+          return {
+            collection,
+            variant
+          }
+        })
+        if (curatedData.length > 0) {
+          lines.forEach((line) => {
+            (async () => {
+              const { data: { product } } = await fetchProduct(line.merchandise.product.id);
+              if (!product) return;
+              const { collections: { nodes: collectionList = [] } } = product || {};
+              collectionList.forEach(async collection => {
+                let isFreeProductElible = false;
+                const { id: collectionId } = collection;
+                isFreeProductElible = curatedData.find(setting => {
+                  if (setting.collection == collectionId) {
+                    return setting;
+                  }
+                });
+                if (isFreeProductElible) {
+                  const variantToAdd = isFreeProductElible.variant;
+                  await handleAddToCart(variantToAdd);
+                }
+              })
+            })();
+          });
+        }
+      }
+    })();
+  }, [removedComplimentaryProducts])
 
   useEffect(() => {
     if (showError) {
       const timer = setTimeout(() => setShowError(false), 3000);
       return () => clearTimeout(timer);
     }
-
   }, [showError]);
 
   async function updateCart(line) {
@@ -112,12 +238,9 @@ function App() {
       merchandiseId: `${line.merchandise.id}`,
       quantity: 1,
     });
-    if (updateQuantity.type === 'error') {
-      setShowError(true);
-      console.error(updateQuantity.message);
-    }
   }
   async function removeCartItem(line) {
+    setAdding(true);
     const removeItem = await applyCartLinesChange({
       type: 'removeCartLine',
       id: `${line.id}`,
@@ -127,169 +250,30 @@ function App() {
       setShowError(true);
       console.error(removeItem.message);
     }
+    setAdding(false);
   }
-
   async function handleAddToCart(constiantId) {
     setAdding(true);
     const result = await applyCartLinesChange({
       type: 'addCartLine',
       merchandiseId: constiantId,
       quantity: 1,
+      attributes: [
+        {
+          "key": "_complimentaryProduct",
+          "value": "true"
+        }
+      ]
     });
     setAdding(false);
-    if (result.type === 'error') {
-      setShowError(true);
-      console.error(result.message);
-    }
   }
 
-  if (loading) {
-    return <LoadingSkeleton />;
+  if(adding) {
+  return(
+      <Banner
+        status="critical"
+        title="Updating the offers."
+      />
+  )
   }
-
-  if (!loading && products.length === 0) {
-    return null;
-  }
-
-  const productsOnOffer = getProductsOnOffer(lines, products);
-
-  if (!productsOnOffer.length) {
-    return null;
-  }
-
-  <Extension lines={lines} />
-  return (
-    <ProductOffer
-      product={productsOnOffer[0]}
-      i18n={i18n}
-      adding={adding}
-      handleAddToCart={handleAddToCart}
-      showError={showError}
-    />
-  );
-}
-
-function Extension({ lines }) {
-  const address = useShippingAddress();
-  useBuyerJourneyIntercept(
-    ({ canBlockProgress }) => {
-      return canBlockProgress &&
-        address?.countryCode &&
-        address.countryCode !== 'CA'
-        ? {
-          behavior: 'block',
-          reason: 'Invalid shipping country',
-          errors: [
-            {
-              message:
-                'Sorry, we can only ship to Canada',
-              // Show an error underneath the country code field
-              target:
-                '$.cart.deliveryGroups[0].deliveryAddress.countryCode',
-            },
-            {
-              // In addition, show an error at the page level
-              message:
-                'Please use a different address.',
-            },
-          ],
-        }
-        : {
-          behavior: 'allow',
-        };
-    },
-  );
-
-  return null;
-}
-
-function LoadingSkeleton() {
-  return (
-    <BlockStack spacing='loose'>
-      <Divider />
-      <Heading level={2}>You might also like</Heading>
-      <BlockStack spacing='loose'>
-        <InlineLayout
-          spacing='base'
-          columns={[64, 'fill', 'auto']}
-          blockAlignment='center'
-        >
-          <SkeletonImage aspectRatio={1} />
-          <BlockStack spacing='none'>
-            <SkeletonText inlineSize='large' />
-            <SkeletonText inlineSize='small' />
-          </BlockStack>
-          <Button kind='secondary' disabled={true}>
-            Add
-          </Button>
-        </InlineLayout>
-      </BlockStack>
-    </BlockStack>
-  );
-}
-
-function getProductsOnOffer(lines, products) {
-  const cartLineProductconstiantIds = lines.map((item) => item.merchandise.id);
-  return products.filter((product) => {
-    const isProductconstiantInCart = product.constiants.nodes.some(({ id }) =>
-      cartLineProductconstiantIds.includes(id)
-    );
-    return !isProductconstiantInCart;
-  });
-}
-
-function ProductOffer({ product, i18n, adding, handleAddToCart, showError }) {
-  const { images, title, constiants } = product;
-  const renderPrice = i18n.formatCurrency(constiants.nodes[0].price.amount);
-  const imageUrl =
-    images.nodes[0]?.url ??
-    'https://cdn.shopify.com/s/files/1/0533/2089/files/placeholder-images-image_medium.png?format=webp&v=1530129081';
-
-  return (
-    <BlockStack spacing='loose'>
-      <Divider />
-      <Heading level={2}>You might also like</Heading>
-      <BlockStack spacing='loose'>
-        <InlineLayout
-          spacing='base'
-          columns={[64, 'fill', 'auto']}
-          blockAlignment='center'
-        >
-          <Image
-            border='base'
-            borderWidth='base'
-            borderRadius='loose'
-            source={imageUrl}
-            description={title}
-            aspectRatio={1}
-          />
-          <BlockStack spacing='none'>
-            <Text size='medium' emphasis='strong'>
-              {title}
-            </Text>
-            <Text appearance='subdued'>{renderPrice}</Text>
-          </BlockStack>
-          <Button
-            kind='secondary'
-            loading={adding}
-            accessibilityLabel={`Add ${title} to cart`}
-            onPress={() => handleAddToCart(constiants.nodes[0].id)}
-          >
-            Add
-          </Button>
-        </InlineLayout>
-      </BlockStack>
-      {showError && <ErrorBanner />}
-    </BlockStack>
-  );
-}
-
-
-
-function ErrorBanner() {
-  return (
-    <Banner status='critical'>
-      There was an issue adding this product. Please try again.
-    </Banner>
-  );
 }
