@@ -105,7 +105,7 @@ function App() {
     return metaObjectJson;
   }
 
-  
+
 
   useBuyerJourneyIntercept(
     ({ canBlockProgress }) => {
@@ -164,19 +164,29 @@ function App() {
           }
         });
         isFreeProduct && line.quantity >= 2 && await updateCart(line);
-        // updateFreeProductsCount(freeProductsCount);
+        updateFreeProductsCount(freeProductsCount);
 
         const { tags = [] } = line || {};
         if (!isFreeProduct && tags.find(item => item == 'free_gift')) {
-          await removeCartItem(line);
+          const data = await removeCartItem(line);
+          if (data.type == "error") {
+            setTimeout(async () => {
+              await removeCartItem(line);
+            }, 1000)
+          }
         }
         if (!removedComplimentaryProducts) {
           if (isComplimentaryProduct) {
-            await removeCartItem(line);
+            const data = await removeCartItem(line);
+            if (data.type == "error") {
+              setTimeout(async () => {
+                await removeCartItem(line);
+              }, 1000)
+            }
           }
         }
       })
-      if(!doesComplimentaryProductExist) {
+      if (!doesComplimentaryProductExist) {
         updateComplimentaryProductFlag(true);
       }
     }
@@ -184,8 +194,9 @@ function App() {
 
   //remove existing complimentary product and re-add them
   useEffect(() => {
-    (async () => {
-      if (removedComplimentaryProducts) {
+    let productAdded = [];
+    if (removedComplimentaryProducts) {
+      (async () => {
         const { data: { page: { complimentarySettings: { value: metaObjectData } } } } = await fetchPage();
         const metaObjectJson = JSON.parse(metaObjectData);
         const complimentarySettings = await Promise.all(metaObjectJson.map(async (metaobject) => {
@@ -202,27 +213,28 @@ function App() {
         if (curatedData.length > 0) {
           lineItemsData.map((line) => {
             const collectionList = line?.collections || [];
-              collectionList.map(async(collection) => {
-                let isFreeProductElible = false;
-                isFreeProductElible = curatedData.find(setting => {
-                  if (setting.collection == collection) {
-                    return setting;
-                  }
-                });
-                if (isFreeProductElible) {
-                  const variantToAdd = isFreeProductElible.variant;
-                  const result = await handleAddToCart(variantToAdd);
-                  if(result.error) {
-                    setTimeout(async () => {
-                      await handleAddToCart(variantToAdd);
-                    }, 1000)
-                  }
+            collectionList.map(async (collection) => {
+              let isFreeProductElible = false;
+              isFreeProductElible = curatedData.find(setting => {
+                if (setting.collection == collection) {
+                  return setting;
                 }
-              })
+              });
+              if (isFreeProductElible) {
+                const variantToAdd = isFreeProductElible.variant;
+                if (productAdded.find(id => id == variantToAdd)) {
+                  return;
+                }
+                else {
+                  productAdded = [...productAdded, variantToAdd];
+                  await handleAddToCart(variantToAdd);
+                }
+              }
+            })
           });
         }
-      }
-    })();
+      })();
+    };
   }, [removedComplimentaryProducts])
 
   useEffect(() => {
@@ -241,18 +253,12 @@ function App() {
     });
   }
   async function removeCartItem(line) {
-    setAdding(true);
     const removeItem = await applyCartLinesChange({
       type: 'removeCartLine',
       id: `${line.id}`,
       quantity: line.quantity
     })
-    if (removeItem.type === 'error') {
-      setShowError(true);
-      console.error(removeItem.message);
-    }
-
-    setAdding(false);
+    return removeItem;
   }
   async function handleAddToCart(constiantId) {
     setAdding(true);
@@ -268,15 +274,23 @@ function App() {
       ]
     });
     setAdding(false);
-    return result;
+    if (result.type == "error") {
+      setTimeout(async () => {
+        await handleAddToCart(constiantId);
+      }, 2000)
+    }
+    else {
+      return result;
+    }
   }
 
-  if(adding) {
-  return(
+
+  if (adding) {
+    return (
       <Banner
         status="critical"
         title="Updating the offers."
       />
-  )
+    )
   }
 }
