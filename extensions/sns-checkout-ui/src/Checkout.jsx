@@ -4,6 +4,7 @@ import {
   useCartLines,
   useApplyCartLinesChange,
   useBuyerJourneyIntercept,
+  useApplyAttributeChange,
   Banner
 } from "@shopify/ui-extensions-react/checkout";
 
@@ -11,17 +12,22 @@ import {
 export default reactExtension("purchase.checkout.block.render", () => <App />);
 
 function App() {
+  const applyAttributeChange = useApplyAttributeChange();
   const applyCartLinesChange = useApplyCartLinesChange();
   const [showError, setShowError] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [isProductBeingRemoved, setProductBeingRemoved] = useState(false);
   const [freeProductsCount, updateFreeProductsCount] = useState(0);
   const lines = useCartLines();
   const [removedComplimentaryProducts, updateComplimentaryProductFlag] = useState(false);
   const [lineItemsData, setLineItemsData] = useState([])
 
+  const storeFrontApiKey = "bc613e26638752aae34fdeeac6210cf0";
+  const graphQlUrl = "https://sports-nutrition-source-canada.com/api/2023-10/graphql.json";
+
   const fetchProduct = async (id) => {
     const headers = new Headers();
-    headers.append("X-Shopify-Storefront-Access-Token", "8391eace9d52e78d66fa50b5aadcc894");
+    headers.append("X-Shopify-Storefront-Access-Token", storeFrontApiKey);
     headers.append("Content-Type", "application/json");
     const query = `query product ($id: ID) { product(id: $id) {tags  collections(first: 10) {
       nodes {
@@ -40,14 +46,14 @@ function App() {
       body: graphql
     };
 
-    const productData = await fetch("https://umesh-dev-store.myshopify.com/api/2023-10/graphql.json", requestOptions);
+    const productData = await fetch(graphQlUrl, requestOptions);
     const productJson = await productData.json();
     return productJson;
   }
 
   const fetchPage = async () => {
     const headers = new Headers();
-    headers.append("X-Shopify-Storefront-Access-Token", "8391eace9d52e78d66fa50b5aadcc894");
+    headers.append("X-Shopify-Storefront-Access-Token", storeFrontApiKey);
     headers.append("Content-Type", "application/json");
     const query = `query page ($handle: String) {
       page(handle: $handle) {
@@ -69,14 +75,14 @@ function App() {
       body: graphql
     };
 
-    const pageData = await fetch("https://umesh-dev-store.myshopify.com/api/2023-10/graphql.json", requestOptions);
+    const pageData = await fetch(graphQlUrl, requestOptions);
     const pageJson = await pageData.json();
     return pageJson;
   }
 
   const fetchMetaobject = async (id) => {
     const headers = new Headers();
-    headers.append("X-Shopify-Storefront-Access-Token", "8391eace9d52e78d66fa50b5aadcc894");
+    headers.append("X-Shopify-Storefront-Access-Token", storeFrontApiKey);
     headers.append("Content-Type", "application/json");
     const query = `query metaobject ($id: ID) {
       metaobject(id: $id) {
@@ -100,7 +106,7 @@ function App() {
       body: graphql
     };
 
-    const metaObjectData = await fetch("https://umesh-dev-store.myshopify.com/api/2023-10/graphql.json", requestOptions);
+    const metaObjectData = await fetch(graphQlUrl, requestOptions);
     const metaObjectJson = await metaObjectData.json();
     return metaObjectJson;
   }
@@ -145,7 +151,6 @@ function App() {
 
   useEffect(() => {
     if (lineItemsData.length > 0) {
-      debugger;
       let freeProductsCount = 0;
       let isFreeProduct = false; //for rebuy tier product
       let doesComplimentaryProductExist = false; //for complimentary product
@@ -168,19 +173,27 @@ function App() {
 
         const { tags = [] } = line || {};
         if (!isFreeProduct && tags.find(item => item == 'free_gift')) {
+          setProductBeingRemoved(true)
           const data = await removeCartItem(line);
+          setProductBeingRemoved(false)
           if (data.type == "error") {
             setTimeout(async () => {
+              setProductBeingRemoved(true)
               await removeCartItem(line);
+              setProductBeingRemoved(false)
             }, 1000)
           }
         }
         if (!removedComplimentaryProducts) {
           if (isComplimentaryProduct) {
+            setProductBeingRemoved(true)
             const data = await removeCartItem(line);
+            setProductBeingRemoved(false)
             if (data.type == "error") {
               setTimeout(async () => {
+                setProductBeingRemoved(true)
                 await removeCartItem(line);
+                setProductBeingRemoved(false)
               }, 1000)
             }
           }
@@ -230,9 +243,13 @@ function App() {
                   await handleAddToCart(variantToAdd);
                 }
               }
+              if(productAdded.length > 0) {
+                await addNote(productAdded.length)
+              }
             })
           });
         }
+
       })();
     };
   }, [removedComplimentaryProducts])
@@ -284,6 +301,16 @@ function App() {
     }
   }
 
+async function addNote(note){
+  const result = await applyAttributeChange({
+    "type": "updateAttribute",
+    "value": `${note}`,
+    "key": "_complimentaryProductCount"
+  })
+  console.log("result", result);
+  return result;
+}
+
 
   if (adding) {
     return (
@@ -292,5 +319,11 @@ function App() {
         title="Updating the offers."
       />
     )
+  }
+  if(isProductBeingRemoved) {
+    return (<Banner
+    status="critical"
+    title="Updating the offers."
+  />)
   }
 }
