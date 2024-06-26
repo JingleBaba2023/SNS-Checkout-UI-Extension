@@ -22,14 +22,11 @@ function App() {
   const [removedComplimentaryProducts, updateComplimentaryProductFlag] = useState(false);
   const [lineItemsData, setLineItemsData] = useState([])
 
-  const storeFrontApiKey = "bc613e26638752aae34fdeeac6210cf0";
-  const graphQlUrl = "https://sports-nutrition-source-canada.com/api/2023-10/graphql.json";
-
   const fetchProduct = async (id) => {
     const headers = new Headers();
-    headers.append("X-Shopify-Storefront-Access-Token", storeFrontApiKey);
+    headers.append("X-Shopify-Storefront-Access-Token", "d199d7b1934bb49ef55c92ffd695421d");
     headers.append("Content-Type", "application/json");
-    const query = `query product ($id: ID) { product(id: $id) {tags  collections(first: 10) {
+    const query = `query product ($id: ID) { product(id: $id) {tags  collections(first: 30) {
       nodes {
         id
       }
@@ -46,14 +43,14 @@ function App() {
       body: graphql
     };
 
-    const productData = await fetch(graphQlUrl, requestOptions);
+    const productData = await fetch("https://sports-nutrition-source-canada.myshopify.com/api/2023-10/graphql.json", requestOptions);
     const productJson = await productData.json();
     return productJson;
   }
 
   const fetchPage = async () => {
     const headers = new Headers();
-    headers.append("X-Shopify-Storefront-Access-Token", storeFrontApiKey);
+    headers.append("X-Shopify-Storefront-Access-Token","d199d7b1934bb49ef55c92ffd695421d");
     headers.append("Content-Type", "application/json");
     const query = `query page ($handle: String) {
       page(handle: $handle) {
@@ -75,14 +72,14 @@ function App() {
       body: graphql
     };
 
-    const pageData = await fetch(graphQlUrl, requestOptions);
+    const pageData = await fetch("https://sports-nutrition-source-canada.myshopify.com/api/2023-10/graphql.json", requestOptions);
     const pageJson = await pageData.json();
     return pageJson;
   }
 
   const fetchMetaobject = async (id) => {
     const headers = new Headers();
-    headers.append("X-Shopify-Storefront-Access-Token", storeFrontApiKey);
+    headers.append("X-Shopify-Storefront-Access-Token","d199d7b1934bb49ef55c92ffd695421d");
     headers.append("Content-Type", "application/json");
     const query = `query metaobject ($id: ID) {
       metaobject(id: $id) {
@@ -106,7 +103,7 @@ function App() {
       body: graphql
     };
 
-    const metaObjectData = await fetch(graphQlUrl, requestOptions);
+    const metaObjectData = await fetch("https://sports-nutrition-source-canada.myshopify.com/api/2023-10/graphql.json", requestOptions);
     const metaObjectJson = await metaObjectData.json();
     return metaObjectJson;
   }
@@ -210,6 +207,7 @@ function App() {
     let productAdded = [];
     if (removedComplimentaryProducts) {
       (async () => {
+        await addNote(0);
         const { data: { page: { complimentarySettings: { value: metaObjectData } } } } = await fetchPage();
         const metaObjectJson = JSON.parse(metaObjectData);
         const complimentarySettings = await Promise.all(metaObjectJson.map(async (metaobject) => {
@@ -240,7 +238,8 @@ function App() {
                 }
                 else {
                   productAdded = [...productAdded, variantToAdd];
-                  await handleAddToCart(variantToAdd);
+                  const result = await handleAddToCart(variantToAdd);
+                  console.log("result", result);
                 }
               }
               if(productAdded.length > 0) {
