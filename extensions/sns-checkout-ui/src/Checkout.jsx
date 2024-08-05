@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   reactExtension,
   useCartLines,
+  useTotalAmount,
   useApplyCartLinesChange,
   useBuyerJourneyIntercept,
   Banner
@@ -16,6 +17,7 @@ function App() {
   const [adding, setAdding] = useState(false);
   const [freeProductsCount, updateFreeProductsCount] = useState(0);
   const lines = useCartLines();
+  const {amount:totalPrice} = useTotalAmount()
   const [removedComplimentaryProducts, updateComplimentaryProductFlag] = useState(false);
   const [lineItemsData, setLineItemsData] = useState([])
   const graphQlUrl = `https://sports-nutrition-source-canada.myshopify.com/api/2023-10/graphql.json`;
@@ -149,16 +151,21 @@ function App() {
   useEffect(() => {
     if (lineItemsData.length > 0) {
       debugger;
+   
       let freeProductsCount = 0;
       let doesComplimentaryProductExist = false; //for complimentary product
       lineItemsData.forEach(async (line) => {
         let isComplimentaryProduct = false;
+        const _rebuyTierSettings = JSON.stringify(line.attributes?.find(attr => attr.key == "_rebuyTierSettings") || "{}");
         let isFreeProduct = false; 
         doesComplimentaryProductExist = false;
         line?.attributes?.forEach(attr => {
+
           if (attr.key == '_attribution' && attr.value == 'Rebuy Tiered Progress Bar') {
             isFreeProduct = true;
-            freeProductsCount = freeProductsCount + 1;
+            if(_rebuyTierSettings[line.merchandise.id] >= totalPrice) {
+              freeProductsCount = freeProductsCount + 1;
+            }
           }
           if (attr.key == "_complimentaryProduct" && attr.value == "true") {
             isComplimentaryProduct = true;
@@ -166,6 +173,10 @@ function App() {
             freeProductsCount = freeProductsCount + 1;
           }
         });
+
+        if(_rebuyTierSettings[line.merchandise.id] < totalPrice) {
+          await removeCartItem(line);
+        }
         isFreeProduct && line.quantity >= 2 && await updateCart(line);
         updateFreeProductsCount(freeProductsCount);
 
