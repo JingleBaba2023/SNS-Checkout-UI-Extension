@@ -18,10 +18,13 @@ function App() {
   const lines = useCartLines();
   const [removedComplimentaryProducts, updateComplimentaryProductFlag] = useState(false);
   const [lineItemsData, setLineItemsData] = useState([])
+  const graphQlUrl = `https://sports-nutrition-source-canada.myshopify.com/api/2023-10/graphql.json`;
+  const accessToken = "d199d7b1934bb49ef55c92ffd695421d"; 
+  
 
   const fetchProduct = async (id) => {
     const headers = new Headers();
-    headers.append("X-Shopify-Storefront-Access-Token", "8391eace9d52e78d66fa50b5aadcc894");
+    headers.append("X-Shopify-Storefront-Access-Token", accessToken);
     headers.append("Content-Type", "application/json");
     const query = `query product ($id: ID) { product(id: $id) {tags  collections(first: 10) {
       nodes {
@@ -40,14 +43,14 @@ function App() {
       body: graphql
     };
 
-    const productData = await fetch("https://umesh-dev-store.myshopify.com/api/2023-10/graphql.json", requestOptions);
+    const productData = await fetch(graphQlUrl, requestOptions);
     const productJson = await productData.json();
     return productJson;
   }
 
   const fetchPage = async () => {
     const headers = new Headers();
-    headers.append("X-Shopify-Storefront-Access-Token", "8391eace9d52e78d66fa50b5aadcc894");
+    headers.append("X-Shopify-Storefront-Access-Token", accessToken);
     headers.append("Content-Type", "application/json");
     const query = `query page ($handle: String) {
       page(handle: $handle) {
@@ -69,14 +72,14 @@ function App() {
       body: graphql
     };
 
-    const pageData = await fetch("https://umesh-dev-store.myshopify.com/api/2023-10/graphql.json", requestOptions);
+    const pageData = await fetch(graphQlUrl, requestOptions);
     const pageJson = await pageData.json();
     return pageJson;
   }
 
   const fetchMetaobject = async (id) => {
     const headers = new Headers();
-    headers.append("X-Shopify-Storefront-Access-Token", "8391eace9d52e78d66fa50b5aadcc894");
+    headers.append("X-Shopify-Storefront-Access-Token", accessToken);
     headers.append("Content-Type", "application/json");
     const query = `query metaobject ($id: ID) {
       metaobject(id: $id) {
@@ -100,7 +103,7 @@ function App() {
       body: graphql
     };
 
-    const metaObjectData = await fetch("https://umesh-dev-store.myshopify.com/api/2023-10/graphql.json", requestOptions);
+    const metaObjectData = await fetch(graphQlUrl, requestOptions);
     const metaObjectJson = await metaObjectData.json();
     return metaObjectJson;
   }
@@ -147,10 +150,10 @@ function App() {
     if (lineItemsData.length > 0) {
       debugger;
       let freeProductsCount = 0;
-      let isFreeProduct = false; //for rebuy tier product
       let doesComplimentaryProductExist = false; //for complimentary product
       lineItemsData.forEach(async (line) => {
         let isComplimentaryProduct = false;
+        let isFreeProduct = false; 
         doesComplimentaryProductExist = false;
         line?.attributes?.forEach(attr => {
           if (attr.key == '_attribution' && attr.value == 'Rebuy Tiered Progress Bar') {
@@ -283,7 +286,6 @@ function App() {
       return result;
     }
   }
-
 
   if (adding) {
     return (

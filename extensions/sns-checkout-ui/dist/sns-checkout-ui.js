@@ -19566,9 +19566,11 @@ ${errorInfo.componentStack}`);
     const lines = useCartLines();
     const [removedComplimentaryProducts, updateComplimentaryProductFlag] = (0, import_react12.useState)(false);
     const [lineItemsData, setLineItemsData] = (0, import_react12.useState)([]);
+    const graphQlUrl = `https://sports-nutrition-source-canada.myshopify.com/api/2023-10/graphql.json`;
+    const accessToken = "d199d7b1934bb49ef55c92ffd695421d";
     const fetchProduct = (id) => __async(this, null, function* () {
       const headers = new Headers();
-      headers.append("X-Shopify-Storefront-Access-Token", "8391eace9d52e78d66fa50b5aadcc894");
+      headers.append("X-Shopify-Storefront-Access-Token", accessToken);
       headers.append("Content-Type", "application/json");
       const query = `query product ($id: ID) { product(id: $id) {tags  collections(first: 10) {
       nodes {
@@ -19585,13 +19587,13 @@ ${errorInfo.componentStack}`);
         headers,
         body: graphql
       };
-      const productData = yield fetch("https://umesh-dev-store.myshopify.com/api/2023-10/graphql.json", requestOptions);
+      const productData = yield fetch(graphQlUrl, requestOptions);
       const productJson = yield productData.json();
       return productJson;
     });
     const fetchPage = () => __async(this, null, function* () {
       const headers = new Headers();
-      headers.append("X-Shopify-Storefront-Access-Token", "8391eace9d52e78d66fa50b5aadcc894");
+      headers.append("X-Shopify-Storefront-Access-Token", accessToken);
       headers.append("Content-Type", "application/json");
       const query = `query page ($handle: String) {
       page(handle: $handle) {
@@ -19611,13 +19613,13 @@ ${errorInfo.componentStack}`);
         headers,
         body: graphql
       };
-      const pageData = yield fetch("https://umesh-dev-store.myshopify.com/api/2023-10/graphql.json", requestOptions);
+      const pageData = yield fetch(graphQlUrl, requestOptions);
       const pageJson = yield pageData.json();
       return pageJson;
     });
     const fetchMetaobject = (id) => __async(this, null, function* () {
       const headers = new Headers();
-      headers.append("X-Shopify-Storefront-Access-Token", "8391eace9d52e78d66fa50b5aadcc894");
+      headers.append("X-Shopify-Storefront-Access-Token", accessToken);
       headers.append("Content-Type", "application/json");
       const query = `query metaobject ($id: ID) {
       metaobject(id: $id) {
@@ -19639,7 +19641,7 @@ ${errorInfo.componentStack}`);
         headers,
         body: graphql
       };
-      const metaObjectData = yield fetch("https://umesh-dev-store.myshopify.com/api/2023-10/graphql.json", requestOptions);
+      const metaObjectData = yield fetch(graphQlUrl, requestOptions);
       const metaObjectJson = yield metaObjectData.json();
       return metaObjectJson;
     });
