@@ -16,6 +16,7 @@ function App() {
   const [showError, setShowError] = useState(false);
   const [adding, setAdding] = useState(false);
   const [freeProductsCount, updateFreeProductsCount] = useState(0);
+  const [rebuyTiers, setRebuyTiers] = useState(false);
   const lines = useCartLines();
   const {amount:totalPrice} = useTotalAmount()
   const [removedComplimentaryProducts, updateComplimentaryProductFlag] = useState(false);
@@ -28,7 +29,7 @@ function App() {
     const headers = new Headers();
     headers.append("X-Shopify-Storefront-Access-Token", accessToken);
     headers.append("Content-Type", "application/json");
-    const query = `query product ($id: ID) { product(id: $id) {tags  collections(first: 10) {
+    const query = `query product ($id: ID) { product(id: $id) {tags  collections(first: 30) {
       nodes {
         id
       }
@@ -147,25 +148,47 @@ function App() {
     })()
   }, [lines]);
 
+  useEffect(() => {
+    if(rebuyTiers) {   
+       lineItemsData.forEach(async (line) => {
+        for(const attr of  line.attributes) {
+          if (attr.key == '_attribution' && attr.value == 'Rebuy Tiered Progress Bar') {
+            const id = line.merchandise.id;
+            console.log(id, "variant Id");
+            const staticId = id.split('gid://shopify/ProductVariant/')[1];
+            console.log(rebuyTiers, "rebuyTiers");
+            console.log(staticId, "static id");
+            console.log(totalPrice, "totalPrice");
+            console.log(rebuyTiers[staticId], "rebuy tier matched");
+            if(totalPrice < rebuyTiers[staticId]) {
+              await removeCartItem(line);
+            }
+          }
+        }
+    })
+  }
+  }, [rebuyTiers,lineItemsData])
+
 
   useEffect(() => {
     if (lineItemsData.length > 0) {
-      debugger;
-   
       let freeProductsCount = 0;
       let doesComplimentaryProductExist = false; //for complimentary product
       lineItemsData.forEach(async (line) => {
         let isComplimentaryProduct = false;
-        const _rebuyTierSettings = JSON.stringify(line.attributes?.find(attr => attr.key == "_rebuyTierSettings") || "{}");
+        const _rebuyTierSettings = line.attributes?.find(attr => attr.key == "_rebuyTierSettings");
+        if(_rebuyTierSettings) {
+          const _rebuyTiers = JSON.parse(_rebuyTierSettings.value);
+          if(!rebuyTiers && Object.keys(_rebuyTiers).length) {
+            setRebuyTiers(_rebuyTiers);
+          }
+        }
         let isFreeProduct = false; 
         doesComplimentaryProductExist = false;
         line?.attributes?.forEach(attr => {
-
           if (attr.key == '_attribution' && attr.value == 'Rebuy Tiered Progress Bar') {
             isFreeProduct = true;
-            if(_rebuyTierSettings[line.merchandise.id] >= totalPrice) {
               freeProductsCount = freeProductsCount + 1;
-            }
           }
           if (attr.key == "_complimentaryProduct" && attr.value == "true") {
             isComplimentaryProduct = true;
@@ -173,14 +196,6 @@ function App() {
             freeProductsCount = freeProductsCount + 1;
           }
         });
-
-        console.log(totalPrice, "totalprice");
-        console.log(_rebuyTierSettings[line.merchandise.id] , "_rebuyTierSettings[line.merchandise.id] ");
-        console.log(isFreeProduct, "isFreeProduct");
-
-        if(isFreeProduct && _rebuyTierSettings[line.merchandise.id] < totalPrice) {
-          await removeCartItem(line);
-        }
         isFreeProduct && line.quantity >= 2 && await updateCart(line);
         updateFreeProductsCount(freeProductsCount);
 
@@ -228,6 +243,7 @@ function App() {
             variant
           }
         })
+        console.log(curatedData, "curatedData")
         if (curatedData.length > 0) {
           lineItemsData.map((line) => {
             const collectionList = line?.collections || [];
@@ -238,6 +254,7 @@ function App() {
                   return setting;
                 }
               });
+       
               if (isFreeProductElible) {
                 const variantToAdd = isFreeProductElible.variant;
                 if (productAdded.find(id => id == variantToAdd)) {
