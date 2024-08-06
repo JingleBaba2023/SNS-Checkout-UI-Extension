@@ -174,7 +174,11 @@ function App() {
           }
         });
 
-        if(_rebuyTierSettings[line.merchandise.id] < totalPrice) {
+        console.log(totalPrice, "totalprice");
+        console.log(_rebuyTierSettings[line.merchandise.id] , "_rebuyTierSettings[line.merchandise.id] ");
+        console.log(isFreeProduct, "isFreeProduct");
+
+        if(isFreeProduct && _rebuyTierSettings[line.merchandise.id] < totalPrice) {
           await removeCartItem(line);
         }
         isFreeProduct && line.quantity >= 2 && await updateCart(line);
