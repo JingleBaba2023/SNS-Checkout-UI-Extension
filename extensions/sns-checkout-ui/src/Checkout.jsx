@@ -150,6 +150,11 @@ function App() {
 
   useEffect(() => {
     if(rebuyTiers) {   
+      const finalPrice = lineItemsData.reduce((total, current) => {
+        const price = current.cost.totalAmount.amount;
+         total = total+price;
+         return total;
+      },0)
        lineItemsData.forEach(async (line) => {
         for(const attr of  line.attributes) {
           if (attr.key == '_attribution' && attr.value == 'Rebuy Tiered Progress Bar') {
@@ -158,9 +163,9 @@ function App() {
             const staticId = id.split('gid://shopify/ProductVariant/')[1];
             console.log(rebuyTiers, "rebuyTiers");
             console.log(staticId, "static id");
-            console.log(totalPrice, "totalPrice");
+            console.log(finalPrice, "totalPrice");
             console.log(rebuyTiers[staticId], "rebuy tier matched");
-            if(totalPrice < rebuyTiers[staticId]) {
+            if(finalPrice < rebuyTiers[staticId]) {
               await removeCartItem(line);
             }
           }
